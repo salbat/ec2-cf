@@ -10,7 +10,7 @@
     },
     "Mappings": {
         "RegionMap" : {
-            "us-east-1"      : { "AMI" : "ami-7f418316" },
+            "us-east-1"      : { "AMI" : "ami-6411e20d" },
             "us-west-1"      : { "AMI" : "ami-951945d0" },
             "us-west-2"      : { "AMI" : "ami-16fd7026" },
             "eu-west-1"      : { "AMI" : "ami-24506250" },
@@ -26,6 +26,7 @@
             "Type": "AWS::EC2::Instance",
             "Properties": {
                 "KeyName": { "Ref" : "KeyName" },
+                "AvailabilityZone" : "us-east-1c",
                 "ImageId": {
                     "Fn::FindInMap": [
                         "RegionMap",
@@ -63,6 +64,7 @@
          "Subnet" : {
             "Type" : "AWS::EC2::Subnet",
             "Properties" : {
+              "AvailabilityZone" : "us-east-1c",
               "VpcId" : { "Ref" : "myVPC" },
               "CidrBlock" : "10.0.0.0/24",
               "Tags" : [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} } ]
