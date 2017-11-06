@@ -1,127 +1,132 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "EC2 Basic Template",
-    "Metadata": {},
+    "Description": "AWS CloudFormation Sample Template EC2InstanceWithSecurityGroupSample: Create an Amazon EC2 instance running the Amazon Linux AMI. The AMI is chosen based on the region in which the stack is run. This example creates an EC2 security group for the instance to give you SSH access. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the AWS resources used if you create a stack from this template.",
     "Parameters": {
         "KeyName": {
-            "Description": "KeyPair name that will enable SSH Access",
-            "Type": "String"
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair."
+        },
+        "InstanceType": {
+            "Description": "General purpose",
+            "Type": "String",
+            "Default": "t2.micro",
+            "AllowedValues": [
+                "t2.micro"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type."
+        },
+        "SSHLocation": {
+            "Description": "The IP address range that can be used to SSH to the EC2 instances",
+            "Type": "String",
+            "MinLength": "9",
+            "MaxLength": "18",
+            "Default": "0.0.0.0/0",
+            "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+            "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
         }
     },
     "Mappings": {
-        "RegionMap" : {
-            "us-east-1"      : { "AMI" : "ami-6411e20d" },
-            "us-west-1"      : { "AMI" : "ami-951945d0" },
-            "us-west-2"      : { "AMI" : "ami-16fd7026" },
-            "eu-west-1"      : { "AMI" : "ami-24506250" },
-            "sa-east-1"      : { "AMI" : "ami-3e3be423" },
-            "ap-southeast-1" : { "AMI" : "ami-74dda626" },
-            "ap-southeast-2" : { "AMI" : "ami-b3990e89" },
-            "ap-northeast-1" : { "AMI" : "ami-dcfa4edd" }
-          }
+        "AWSInstanceType2Arch": {
+            "t2.micro": {
+                "Arch": "HVM64"
+            }
+        },
+        "AWSInstanceType2NATArch": {
+            "t2.micro": {
+                "Arch": "NATHVM64"
+            }
+        },
+        "AWSRegionArch2AMI": {
+            "us-west-2": {
+                "PV64": "ami-7f77b31f",
+                "HVM64": "ami-efd0428f",
+                "HVMG2": "ami-54d44234"
+            }
+        }
     },
-    "Conditions": {},
     "Resources": {
-        "Ec2Instance": {
+        "EC2Instance": {
             "Type": "AWS::EC2::Instance",
             "Properties": {
-                "KeyName": { "Ref" : "KeyName" },
-                "AvailabilityZone" : "us-east-1c",
+                "InstanceType": {
+                    "Ref": "InstanceType"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "InstanceSecurityGroup"
+                    }
+                ],
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
                 "ImageId": {
                     "Fn::FindInMap": [
-                        "RegionMap",
+                        "AWSRegionArch2AMI",
                         {
                             "Ref": "AWS::Region"
                         },
-                        "AMI"
-                    ]
-                },
-                "SecurityGroupIds": [{"Ref": "InstanceSecurityGroup"}],
-                "SubnetId" : { "Ref" : "Subnet" },
-                "UserData": {
-                    "Fn::Base64": {
-                        "Fn::Join": [
-                            "",
-                            [
-                                "#!/bin/bash -ex\n",
-                                "echo \"hello world\" > /root/hello-world.txt\n"
+                        {
+                            "Fn::FindInMap": [
+                                "AWSInstanceType2Arch",
+                                {
+                                    "Ref": "InstanceType"
+                                },
+                                "Arch"
                             ]
-                        ]
-                    }
+                        }
+                    ]
                 }
-            }
-        },
-        "myVPC" : {
-            "Type" : "AWS::EC2::VPC",
-            "Properties" : {
-               "CidrBlock" : "10.0.0.0/16",
-               "EnableDnsSupport" : "false",
-               "EnableDnsHostnames" : "false",
-               "InstanceTenancy" : "dedicated",
-               "Tags" : [ {"Key" : "foo", "Value" : "bar"} ]
-            }
-         },
-         "Subnet" : {
-            "Type" : "AWS::EC2::Subnet",
-            "Properties" : {
-              "AvailabilityZone" : "us-east-1c",
-              "VpcId" : { "Ref" : "myVPC" },
-              "CidrBlock" : "10.0.0.0/24",
-              "Tags" : [ {"Key" : "Application", "Value" : { "Ref" : "AWS::StackId"} } ]
             }
         },
         "InstanceSecurityGroup": {
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
-                "GroupName" : "myVPCSecGroup",
-                "GroupDescription": "Allow http and SSH to client host",
-                "VpcId" : {"Ref": "myVPC"},
+                "GroupDescription": "Enable SSH access via port 22",
                 "SecurityGroupIngress": [
                     {
                         "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
-                        "CidrIp": "0.0.0.0/0"
-                    },
-                    {
-                        "IpProtocol": "tcp",
                         "FromPort": "22",
                         "ToPort": "22",
-                        "CidrIp": "0.0.0.0/0"
-                    }
-                ],
-                "SecurityGroupEgress": [
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
-                        "CidrIp": "0.0.0.0/0"
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "22",
-                        "ToPort": "22",
-                        "CidrIp": "0.0.0.0/0"
+                        "CidrIp": {
+                            "Ref": "SSHLocation"
+                        }
                     }
                 ]
             }
         }
     },
     "Outputs": {
-        "WebsiteURL": {
-            "Description": "The Website URL",
+        "InstanceId": {
+            "Description": "InstanceId of the newly created EC2 instance",
             "Value": {
-                "Fn::Join": [
-                    "",
-                    [
-                        "http://",
-                        {
-                            "Fn::GetAtt": [
-                                "Ec2Instance",
-                                "PublicDnsName"
-                            ]
-                        }
-                    ]
+                "Ref": "EC2Instance"
+            }
+        },
+        "AZ": {
+            "Description": "Availability Zone of the newly created EC2 instance",
+            "Value": {
+                "Fn::GetAtt": [
+                    "EC2Instance",
+                    "AvailabilityZone"
+                ]
+            }
+        },
+        "PublicDNS": {
+            "Description": "Public DNSName of the newly created EC2 instance",
+            "Value": {
+                "Fn::GetAtt": [
+                    "EC2Instance",
+                    "PublicDnsName"
+                ]
+            }
+        },
+        "PublicIP": {
+            "Description": "Public IP address of the newly created EC2 instance",
+            "Value": {
+                "Fn::GetAtt": [
+                    "EC2Instance",
+                    "PublicIp"
                 ]
             }
         }
