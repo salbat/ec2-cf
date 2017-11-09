@@ -24,3 +24,6 @@ Delete the stack:
 ```bash
 aws cloudformation delete-stack --stack-name myteststack --profile=default --region=us-west-2
 ```
+
+The python script used in this repo to convert the JSON template into YAML can be found here:
+https://github.com/salbat/json2yaml
